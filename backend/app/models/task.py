@@ -12,7 +12,7 @@ class TaskModel(BaseModel):
     description: str = ""
     due_date: Optional[datetime] = None
     priority: str = "Medium"  # Low, Medium, High
-    status: str = "To Do"  # To Do, In Progress, Done
+    status: str = "To Do"  # To Do, In Progress, In Testing, Done
     assigned_to: Optional[str] = None
     created_by: str
     created_at: datetime = Field(default_factory=datetime.utcnow)

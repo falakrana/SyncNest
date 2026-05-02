@@ -4,6 +4,7 @@ from fastapi import HTTPException, status
 from app.database.mongodb import tasks_collection, projects_collection, users_collection
 from app.models.task import TaskModel
 from app.schemas.task_schema import TaskCreate, TaskUpdate, TaskStatusUpdate, TaskResponse
+from app.services.notification_service import trigger_task_assignment_email
 
 async def create_task(project_id: str, task_data: TaskCreate, user_id: str):
     # Verify project exists and user is admin
@@ -25,6 +26,14 @@ async def create_task(project_id: str, task_data: TaskCreate, user_id: str):
     
     result = await tasks_collection.insert_one(task_model.dict(by_alias=True, exclude_none=True))
     created_task = await tasks_collection.find_one({"_id": result.inserted_id})
+
+    if created_task and created_task.get("assigned_to"):
+        await _notify_task_assignment_if_needed(
+            project=project,
+            task=created_task,
+            previous_assigned_to=None,
+            current_assigned_to=created_task.get("assigned_to"),
+        )
     
     return await _format_task_response(created_task)
 
@@ -74,12 +83,19 @@ async def update_task(task_id: str, update_data: TaskUpdate, user_id: str):
         
     update_dict["updated_at"] = datetime.utcnow()
     
+    previous_assigned_to = task.get("assigned_to")
     await tasks_collection.update_one(
         {"_id": ObjectId(task_id)},
         {"$set": update_dict}
     )
     
     updated_task = await tasks_collection.find_one({"_id": ObjectId(task_id)})
+    await _notify_task_assignment_if_needed(
+        project=project,
+        task=updated_task,
+        previous_assigned_to=previous_assigned_to,
+        current_assigned_to=updated_task.get("assigned_to") if updated_task else None,
+    )
     return await _format_task_response(updated_task)
 
 async def update_task_status(task_id: str, update_data: TaskStatusUpdate, user_id: str):
@@ -139,4 +155,23 @@ async def _format_task_response(task):
         created_by=task["created_by"],
         created_at=task["created_at"],
         updated_at=task["updated_at"]
+    )
+
+
+async def _notify_task_assignment_if_needed(project, task, previous_assigned_to, current_assigned_to):
+    if not current_assigned_to:
+        return
+
+    if previous_assigned_to == current_assigned_to:
+        return
+
+    user_doc = await users_collection.find_one({"_id": ObjectId(current_assigned_to)})
+    if not user_doc:
+        return
+
+    trigger_task_assignment_email(
+        assignee_email=user_doc.get("email", ""),
+        assignee_name=user_doc.get("name"),
+        project_name=project.get("name", "Project"),
+        task_title=task.get("title", "Task"),
     )

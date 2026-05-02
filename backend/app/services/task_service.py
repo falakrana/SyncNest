@@ -1,7 +1,7 @@
 from datetime import datetime
 from bson import ObjectId
 from fastapi import HTTPException, status
-from app.database.mongodb import tasks_collection, projects_collection
+from app.database.mongodb import tasks_collection, projects_collection, users_collection
 from app.models.task import TaskModel
 from app.schemas.task_schema import TaskCreate, TaskUpdate, TaskStatusUpdate, TaskResponse
 
@@ -26,7 +26,7 @@ async def create_task(project_id: str, task_data: TaskCreate, user_id: str):
     result = await tasks_collection.insert_one(task_model.dict(by_alias=True, exclude_none=True))
     created_task = await tasks_collection.find_one({"_id": result.inserted_id})
     
-    return _format_task_response(created_task)
+    return await _format_task_response(created_task)
 
 async def get_project_tasks(project_id: str, user_id: str):
     # Verify user is member of project
@@ -39,7 +39,7 @@ async def get_project_tasks(project_id: str, user_id: str):
         
     tasks_cursor = tasks_collection.find({"project_id": project_id})
     tasks = await tasks_cursor.to_list(length=1000)
-    return [_format_task_response(t) for t in tasks]
+    return [await _format_task_response(t) for t in tasks]
 
 async def get_task_by_id(task_id: str, user_id: str):
     if not ObjectId.is_valid(task_id):
@@ -54,7 +54,7 @@ async def get_task_by_id(task_id: str, user_id: str):
     if not project or user_id not in project.get("members", []):
         raise HTTPException(status_code=403, detail="Not authorized to view this task")
         
-    return _format_task_response(task)
+    return await _format_task_response(task)
 
 async def update_task(task_id: str, update_data: TaskUpdate, user_id: str):
     task = await tasks_collection.find_one({"_id": ObjectId(task_id)})
@@ -70,7 +70,7 @@ async def update_task(task_id: str, update_data: TaskUpdate, user_id: str):
 
     update_dict = {k: v for k, v in update_data.dict().items() if v is not None}
     if not update_dict:
-        return _format_task_response(task)
+        return await _format_task_response(task)
         
     update_dict["updated_at"] = datetime.utcnow()
     
@@ -80,7 +80,7 @@ async def update_task(task_id: str, update_data: TaskUpdate, user_id: str):
     )
     
     updated_task = await tasks_collection.find_one({"_id": ObjectId(task_id)})
-    return _format_task_response(updated_task)
+    return await _format_task_response(updated_task)
 
 async def update_task_status(task_id: str, update_data: TaskStatusUpdate, user_id: str):
     task = await tasks_collection.find_one({"_id": ObjectId(task_id)})
@@ -102,7 +102,7 @@ async def update_task_status(task_id: str, update_data: TaskStatusUpdate, user_i
     )
     
     updated_task = await tasks_collection.find_one({"_id": ObjectId(task_id)})
-    return _format_task_response(updated_task)
+    return await _format_task_response(updated_task)
 
 async def delete_task(task_id: str, user_id: str):
     task = await tasks_collection.find_one({"_id": ObjectId(task_id)})
@@ -116,7 +116,15 @@ async def delete_task(task_id: str, user_id: str):
     await tasks_collection.delete_one({"_id": ObjectId(task_id)})
     return {"message": "Task deleted successfully"}
 
-def _format_task_response(task):
+async def _format_task_response(task):
+    assigned_to_email = None
+    assigned_to_name = None
+    if task.get("assigned_to"):
+        user_doc = await users_collection.find_one({"_id": ObjectId(task["assigned_to"])})
+        if user_doc:
+            assigned_to_email = user_doc["email"]
+            assigned_to_name = user_doc.get("name")
+
     return TaskResponse(
         id=str(task["_id"]),
         project_id=task["project_id"],
@@ -126,6 +134,8 @@ def _format_task_response(task):
         priority=task.get("priority", "Medium"),
         status=task.get("status", "To Do"),
         assigned_to=task.get("assigned_to"),
+        assigned_to_email=assigned_to_email,
+        assigned_to_name=assigned_to_name,
         created_by=task["created_by"],
         created_at=task["created_at"],
         updated_at=task["updated_at"]

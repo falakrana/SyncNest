@@ -29,6 +29,8 @@ class TaskResponse(BaseModel):
     priority: str
     status: str
     assigned_to: Optional[str]
+    assigned_to_email: Optional[str] = None
+    assigned_to_name: Optional[str] = None
     created_by: str
     created_at: datetime
     updated_at: datetime

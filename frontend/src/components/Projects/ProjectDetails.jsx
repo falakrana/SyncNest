@@ -15,7 +15,7 @@ const ProjectDetails = () => {
   const [loading, setLoading] = useState(true);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [showMemberModal, setShowMemberModal] = useState(false);
-  const [newTask, setNewTask] = useState({ title: '', description: '', priority: 'Medium', due_date: '' });
+  const [newTask, setNewTask] = useState({ title: '', description: '', priority: 'Medium', due_date: '', assigned_to: '' });
   const [memberEmail, setMemberEmail] = useState('');
 
   const isAdmin = project?.admin_id === user?.id;
@@ -46,7 +46,7 @@ const ProjectDetails = () => {
       await taskService.createTask(id, newTask);
       toast.success('Task created!');
       setShowTaskModal(false);
-      setNewTask({ title: '', description: '', priority: 'Medium', due_date: '' });
+      setNewTask({ title: '', description: '', priority: 'Medium', due_date: '', assigned_to: '' });
       fetchData();
     } catch (error) {
       toast.error('Failed to create task');
@@ -164,6 +164,17 @@ const ProjectDetails = () => {
                   <h4 className="font-bold text-slate-900 mb-1">{task.title}</h4>
                   <p className="text-sm text-slate-500 mb-4">{task.description}</p>
                   
+                  {task.assigned_to_email && (
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600 border border-slate-200">
+                        {(task.assigned_to_name || task.assigned_to_email)[0].toUpperCase()}
+                      </div>
+                      <span className="text-xs text-slate-600 font-medium truncate">
+                        {task.assigned_to_name || task.assigned_to_email}
+                      </span>
+                    </div>
+                  )}
+                  
                   <div className="flex items-center justify-between pt-4 border-t border-slate-50">
                     <div className="flex items-center gap-2 text-xs text-slate-400">
                       <Clock size={14} />
@@ -231,6 +242,21 @@ const ProjectDetails = () => {
                     onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
                   />
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1">Assign To</label>
+                <select
+                  className="w-full px-4 py-2 rounded-lg border border-slate-300 outline-none focus:ring-2 focus:ring-blue-500"
+                  value={newTask.assigned_to}
+                  onChange={(e) => setNewTask({ ...newTask, assigned_to: e.target.value })}
+                >
+                  <option value="">Unassigned</option>
+                  {project.members.map(member => (
+                    <option key={member.id} value={member.id}>
+                      {member.name || member.email} {member.id === user.id ? '(You)' : ''}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="flex gap-3 pt-4">
                 <button type="button" onClick={() => setShowTaskModal(false)} className="flex-1 py-2 border border-slate-300 rounded-lg font-bold">Cancel</button>

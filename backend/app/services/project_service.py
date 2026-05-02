@@ -14,12 +14,12 @@ async def create_project(project_data: ProjectCreate, user_id: str) -> ProjectRe
     result = await projects_collection.insert_one(project_model.dict(by_alias=True, exclude_none=True))
     created_project = await projects_collection.find_one({"_id": result.inserted_id})
     
-    return _format_project_response(created_project)
+    return await _format_project_response(created_project)
 
 async def get_user_projects(user_id: str):
     projects_cursor = projects_collection.find({"members": user_id})
     projects = await projects_cursor.to_list(length=100)
-    return [_format_project_response(p) for p in projects]
+    return [await _format_project_response(p) for p in projects]
 
 async def get_project_by_id(project_id: str, user_id: str):
     if not ObjectId.is_valid(project_id):
@@ -32,14 +32,14 @@ async def get_project_by_id(project_id: str, user_id: str):
     if user_id not in project.get("members", []):
         raise HTTPException(status_code=403, detail="Not a member of this project")
         
-    return _format_project_response(project)
+    return await _format_project_response(project)
 
 async def update_project(project_id: str, update_data: ProjectUpdate, user_id: str):
     project = await _check_project_admin(project_id, user_id)
     
     update_dict = {k: v for k, v in update_data.dict().items() if v is not None}
     if not update_dict:
-        return _format_project_response(project)
+        return await _format_project_response(project)
         
     await projects_collection.update_one(
         {"_id": ObjectId(project_id)},
@@ -47,7 +47,7 @@ async def update_project(project_id: str, update_data: ProjectUpdate, user_id: s
     )
     
     updated_project = await projects_collection.find_one({"_id": ObjectId(project_id)})
-    return _format_project_response(updated_project)
+    return await _format_project_response(updated_project)
 
 async def delete_project(project_id: str, user_id: str):
     await _check_project_admin(project_id, user_id)
@@ -105,12 +105,25 @@ async def _check_project_admin(project_id: str, user_id: str):
         
     return project
 
-def _format_project_response(project):
+async def _format_project_response(project):
+    member_ids = project.get("members", [])
+    members_data = []
+    
+    if member_ids:
+        # Fetch all members in one query
+        cursor = users_collection.find({"_id": {"$in": [ObjectId(mid) for mid in member_ids]}})
+        async for user_doc in cursor:
+            members_data.append({
+                "id": str(user_doc["_id"]),
+                "email": user_doc["email"],
+                "name": user_doc.get("name")
+            })
+
     return ProjectResponse(
         id=str(project["_id"]),
         name=project["name"],
         description=project.get("description", ""),
         admin_id=project["admin_id"],
-        members=project.get("members", []),
+        members=members_data,
         created_at=project["created_at"]
     )

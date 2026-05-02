@@ -12,12 +12,17 @@ class ProjectUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
 
+class MemberResponse(BaseModel):
+    id: str
+    email: str
+    name: Optional[str] = None
+
 class ProjectResponse(BaseModel):
     id: str
     name: str
     description: str
     admin_id: str
-    members: List[str]
+    members: List[MemberResponse]
     created_at: datetime
 
 class MemberAddRequest(BaseModel):

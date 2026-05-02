@@ -18,6 +18,7 @@ graph TD
         Proj[Project Service]
         Task[Task Service]
         Dash[Dashboard Service]
+        Notify[Notification Service]
     end
 ```
 
@@ -35,8 +36,9 @@ graph TD
 2. Admin adds members via email.
 3. Admin creates tasks and assigns them to members.
 4. Members view projects they belong to and update status of assigned tasks.
+5. Notification Service sends emails for key events (member added, task assigned).
 
-## 3. Database Schema
+## 3. Database Schema & API Models
 
 ### Users Collection
 - `_id`: ObjectId
@@ -53,18 +55,22 @@ graph TD
 - `members`: Array<ObjectId> (Ref: Users)
 - `created_at`: DateTime
 
+**API Response**: Includes `members` populated with `id`, `email`, and `name`.
+
 ### Tasks Collection
 - `_id`: ObjectId
 - `project_id`: ObjectId (Ref: Projects)
 - `title`: String
 - `description`: String
 - `priority`: String (Low/Medium/High)
-- `status`: String (To Do/In Progress/Done)
+- `status`: String (To Do/In Progress/In Testing/Done)
 - `assigned_to`: ObjectId (Ref: Users)
 - `created_by`: ObjectId (Ref: Users)
 - `due_date`: DateTime
 - `created_at`: DateTime
 - `updated_at`: DateTime
+
+**API Response**: Includes `assigned_to_email` and `assigned_to_name`.
 
 ## 4. Security Implementation
 

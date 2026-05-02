@@ -39,10 +39,19 @@ A full-stack project management application built with React, FastAPI, and Mongo
 
 ## Environment Variables
 
-### Backend (`.env`)
+### Backend (`backend/.env`)
 - `MONGODB_URL`: MongoDB connection string.
 - `JWT_SECRET_KEY`: Secret for JWT signing.
+- `JWT_ALGORITHM`: Algorithm for JWT (default: HS256).
+- `ACCESS_TOKEN_EXPIRE_MINUTES`: Token expiration time.
 - `ALLOWED_ORIGINS`: CORS allowed origins.
+- `SMTP_HOST`: SMTP server host.
+- `SMTP_PORT`: SMTP server port.
+- `SMTP_USERNAME`: SMTP login username.
+- `SMTP_PASSWORD`: SMTP login password.
+- `SMTP_USE_TLS`: Use TLS for SMTP.
+- `EMAIL_FROM`: Sender email address.
+- `FRONTEND_BASE_URL`: URL of the frontend (for email links).
 
-### Frontend (`.env`)
+### Frontend (`frontend/.env`)
 - `VITE_API_BASE_URL`: URL of the backend API.

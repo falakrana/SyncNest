@@ -1,0 +1,34 @@
+from datetime import datetime
+from typing import Optional
+from pydantic import BaseModel
+
+class TaskCreate(BaseModel):
+    title: str
+    description: Optional[str] = ""
+    due_date: Optional[datetime] = None
+    priority: Optional[str] = "Medium"
+    assigned_to: Optional[str] = None
+
+class TaskUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    due_date: Optional[datetime] = None
+    priority: Optional[str] = None
+    status: Optional[str] = None
+    assigned_to: Optional[str] = None
+
+class TaskStatusUpdate(BaseModel):
+    status: str
+
+class TaskResponse(BaseModel):
+    id: str
+    project_id: str
+    title: str
+    description: str
+    due_date: Optional[datetime]
+    priority: str
+    status: str
+    assigned_to: Optional[str]
+    created_by: str
+    created_at: datetime
+    updated_at: datetime

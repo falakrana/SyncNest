@@ -5,6 +5,25 @@ import { projectService } from '../../services/projectService';
 import { CheckCircle2, Circle, Clock, LayoutDashboard, Target } from 'lucide-react';
 import toast from 'react-hot-toast';
 
+const UserTooltip = ({ active, payload }) => {
+  if (!active || !payload || !payload.length) {
+    return null;
+  }
+
+  const data = payload[0]?.payload;
+  if (!data) {
+    return null;
+  }
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-lg px-3 py-2 shadow-md">
+      <p className="text-sm font-semibold text-slate-900">{data.name || 'Unknown User'}</p>
+      <p className="text-xs text-slate-500">{data.email || 'No email available'}</p>
+      <p className="text-sm text-blue-600 mt-1">count : {data.count}</p>
+    </div>
+  );
+};
+
 const Dashboard = () => {
   const [projects, setProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState('');
@@ -162,19 +181,26 @@ const Dashboard = () => {
               </div>
             </div>
 
-            <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
-              <h3 className="text-xl font-bold text-slate-900 mb-8">Tasks per User</h3>
-              <div className="h-64">
+            <div className="bg-white p-6 lg:p-8 rounded-2xl border border-slate-200 shadow-sm">
+              <h3 className="text-xl font-bold text-slate-900 mb-6">Tasks per User</h3>
+              <div className="h-64 px-1 pt-1">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={stats.by_user}>
-                    <XAxis dataKey="user_id" hide />
+                  <BarChart data={stats.by_user} margin={{ top: 8, right: 12, left: 0, bottom: 8 }}>
+                    <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#475569' }} tickMargin={8} />
                     <YAxis allowDecimals={false} />
-                    <Tooltip />
-                    <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                    <Tooltip content={<UserTooltip />} cursor={{ fill: 'rgba(59, 130, 246, 0.08)' }} />
+                    <Bar
+                      dataKey="count"
+                      fill="#3b82f6"
+                      radius={[4, 4, 0, 0]}
+                      isAnimationActive={true}
+                      animationDuration={900}
+                      animationEasing="ease-out"
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-              <p className="text-center text-xs text-slate-400 mt-4">Task distribution among team members</p>
+              <p className="text-center text-xs text-slate-400 mt-5">Task distribution among team members</p>
             </div>
           </div>
         </>

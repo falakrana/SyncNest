@@ -41,15 +41,15 @@ const ProjectList = () => {
   if (loading) return <div>Loading projects...</div>;
 
   return (
-    <div className="space-y-8">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6 md:space-y-8">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Your Projects</h1>
           <p className="text-slate-500">Manage and track your team projects</p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition-all shadow-lg shadow-blue-500/20"
+          className="w-full sm:w-auto justify-center flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition-all shadow-lg shadow-blue-500/20"
         >
           <Plus size={20} />
           <span>New Project</span>

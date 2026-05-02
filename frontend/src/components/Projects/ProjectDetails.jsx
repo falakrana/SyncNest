@@ -7,6 +7,7 @@ import useAuthStore from '../../context/useAuthStore';
 import toast from 'react-hot-toast';
 
 const ProjectDetails = () => {
+  const today = new Date().toISOString().slice(0, 10);
   const { id } = useParams();
   const { user } = useAuthStore();
   const navigate = useNavigate();
@@ -19,7 +20,7 @@ const ProjectDetails = () => {
   const [showDeleteTaskModal, setShowDeleteTaskModal] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState(null);
   const [selectedTaskByStatus, setSelectedTaskByStatus] = useState({});
-  const [newTask, setNewTask] = useState({ title: '', description: '', priority: 'Medium', due_date: '', assigned_to: '' });
+  const [newTask, setNewTask] = useState({ title: '', description: '', priority: 'Medium', due_date: today, assigned_to: '' });
   const [editingTask, setEditingTask] = useState({ id: null, title: '', description: '', priority: 'Medium', due_date: '', assigned_to: '' });
   const [memberEmail, setMemberEmail] = useState('');
   const statusOptions = ['To Do', 'In Progress', 'In Testing', 'Done'];
@@ -83,7 +84,7 @@ const ProjectDetails = () => {
       await taskService.createTask(id, newTask);
       toast.success('Task created!');
       setShowTaskModal(false);
-      setNewTask({ title: '', description: '', priority: 'Medium', due_date: '', assigned_to: '' });
+      setNewTask({ title: '', description: '', priority: 'Medium', due_date: today, assigned_to: '' });
       fetchData();
     } catch (error) {
       toast.error('Failed to create task');
@@ -169,8 +170,8 @@ const ProjectDetails = () => {
   if (loading) return <div>Loading...</div>;
 
   return (
-    <div className="space-y-8">
-      <div className="rounded-2xl border border-slate-200 bg-gradient-to-r from-white to-slate-50 px-6 py-6 shadow-sm">
+    <div className="space-y-6 md:space-y-8">
+      <div className="rounded-2xl border border-slate-200 bg-gradient-to-r from-white to-slate-50 px-4 py-5 md:px-6 md:py-6 shadow-sm">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-4xl font-black text-slate-900 tracking-tight">{project.name}</h1>
@@ -198,7 +199,7 @@ const ProjectDetails = () => {
             )}
           </div>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           {isAdmin && (
             <button
               onClick={() => setShowMemberModal(true)}
@@ -221,7 +222,7 @@ const ProjectDetails = () => {
       </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {/* Task Columns */}
         {statusOptions.map(status => (
           <div key={status} className="space-y-4 rounded-2xl border border-slate-200 bg-white/80 p-3.5 shadow-sm">
@@ -337,9 +338,9 @@ const ProjectDetails = () => {
 
       {/* Task Modal */}
       {showTaskModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl">
-            <h2 className="text-2xl font-bold mb-6">Create New Task</h2>
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50">
+          <div className="bg-white rounded-2xl p-5 sm:p-8 w-full max-w-md shadow-2xl max-h-[92vh] overflow-y-auto">
+            <h2 className="text-xl sm:text-2xl font-bold mb-5 sm:mb-6">Create New Task</h2>
             <form onSubmit={handleCreateTask} className="space-y-4">
               <div>
                 <label className="block text-sm font-semibold mb-1">Title</label>
@@ -347,6 +348,7 @@ const ProjectDetails = () => {
                   type="text"
                   required
                   className="w-full px-4 py-2 rounded-lg border border-slate-300 outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter task title"
                   value={newTask.title}
                   onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
                 />
@@ -355,11 +357,12 @@ const ProjectDetails = () => {
                 <label className="block text-sm font-semibold mb-1">Description</label>
                 <textarea
                   className="w-full px-4 py-2 rounded-lg border border-slate-300 outline-none focus:ring-2 focus:ring-blue-500 h-20"
+                  placeholder="Enter task description"
                   value={newTask.description}
                   onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold mb-1">Priority</label>
                   <select
@@ -397,9 +400,9 @@ const ProjectDetails = () => {
                   ))}
                 </select>
               </div>
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setShowTaskModal(false)} className="flex-1 py-2 border border-slate-300 rounded-lg font-bold">Cancel</button>
-                <button type="submit" className="flex-1 py-2 bg-blue-600 text-white rounded-lg font-bold">Create Task</button>
+              <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2 sm:pt-4">
+                <button type="button" onClick={() => setShowTaskModal(false)} className="flex-1 py-2.5 border border-slate-300 rounded-lg font-bold">Cancel</button>
+                <button type="submit" className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg font-bold">Create Task</button>
               </div>
             </form>
           </div>
@@ -408,9 +411,9 @@ const ProjectDetails = () => {
 
       {/* Edit Task Modal */}
       {showEditTaskModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl">
-            <h2 className="text-2xl font-bold mb-6">Edit Task</h2>
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50">
+          <div className="bg-white rounded-2xl p-5 sm:p-8 w-full max-w-md shadow-2xl max-h-[92vh] overflow-y-auto">
+            <h2 className="text-xl sm:text-2xl font-bold mb-5 sm:mb-6">Edit Task</h2>
             <form onSubmit={handleEditTask} className="space-y-4">
               <div>
                 <label className="block text-sm font-semibold mb-1">Title</label>
@@ -430,7 +433,7 @@ const ProjectDetails = () => {
                   onChange={(e) => setEditingTask({ ...editingTask, description: e.target.value })}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold mb-1">Priority</label>
                   <select
@@ -468,9 +471,9 @@ const ProjectDetails = () => {
                   ))}
                 </select>
               </div>
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setShowEditTaskModal(false)} className="flex-1 py-2 border border-slate-300 rounded-lg font-bold">Cancel</button>
-                <button type="submit" className="flex-1 py-2 bg-blue-600 text-white rounded-lg font-bold">Update Task</button>
+              <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2 sm:pt-4">
+                <button type="button" onClick={() => setShowEditTaskModal(false)} className="flex-1 py-2.5 border border-slate-300 rounded-lg font-bold">Cancel</button>
+                <button type="submit" className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg font-bold">Update Task</button>
               </div>
             </form>
           </div>
@@ -479,9 +482,9 @@ const ProjectDetails = () => {
 
       {/* Member Modal */}
       {showMemberModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl">
-            <h2 className="text-2xl font-bold mb-6">Add Team Member</h2>
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50">
+          <div className="bg-white rounded-2xl p-5 sm:p-8 w-full max-w-md shadow-2xl max-h-[92vh] overflow-y-auto">
+            <h2 className="text-xl sm:text-2xl font-bold mb-5 sm:mb-6">Add Team Member</h2>
             <form onSubmit={handleAddMember} className="space-y-4">
               <div>
                 <label className="block text-sm font-semibold mb-1">Member Email</label>
@@ -499,12 +502,12 @@ const ProjectDetails = () => {
                   </p>
                 )}
               </div>
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setShowMemberModal(false)} className="flex-1 py-2 border border-slate-300 rounded-lg font-bold">Cancel</button>
+              <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2 sm:pt-4">
+                <button type="button" onClick={() => setShowMemberModal(false)} className="flex-1 py-2.5 border border-slate-300 rounded-lg font-bold">Cancel</button>
                 <button
                   type="submit"
                   disabled={isDuplicateMemberEmail}
-                  className="flex-1 py-2 bg-slate-900 text-white rounded-lg font-bold disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="flex-1 py-2.5 bg-slate-900 text-white rounded-lg font-bold disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   Add Member
                 </button>
@@ -516,9 +519,9 @@ const ProjectDetails = () => {
 
       {/* Delete Task Modal */}
       {showDeleteTaskModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl">
-            <h2 className="text-2xl font-bold mb-2">Delete Task</h2>
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50">
+          <div className="bg-white rounded-2xl p-5 sm:p-8 w-full max-w-md shadow-2xl max-h-[92vh] overflow-y-auto">
+            <h2 className="text-xl sm:text-2xl font-bold mb-2">Delete Task</h2>
             <p className="text-slate-600 mb-6">
               Are you sure you want to delete
               {' '}
@@ -527,21 +530,21 @@ const ProjectDetails = () => {
               </span>
               ?
             </p>
-            <div className="flex gap-3">
+            <div className="flex flex-col-reverse sm:flex-row gap-3">
               <button
                 type="button"
                 onClick={() => {
                   setShowDeleteTaskModal(false);
                   setTaskToDelete(null);
                 }}
-                className="flex-1 py-2 border border-slate-300 rounded-lg font-bold"
+                className="flex-1 py-2.5 border border-slate-300 rounded-lg font-bold"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleDeleteTask}
-                className="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold"
+                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold"
               >
                 Delete
               </button>

@@ -17,7 +17,9 @@ const Signup = () => {
       toast.success('Account created! Please login.');
       navigate('/login');
     } else {
-      toast.error('Signup failed. Email might already be taken.');
+      // Use the actual error from the store if available
+      const errorMessage = useAuthStore.getState().error;
+      toast.error(errorMessage || 'Signup failed. Please try again.');
     }
   };
 

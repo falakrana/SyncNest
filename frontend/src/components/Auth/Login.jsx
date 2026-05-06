@@ -16,7 +16,9 @@ const Login = () => {
       toast.success('Welcome back!');
       navigate('/dashboard');
     } else {
-      toast.error('Invalid email or password');
+      // Use the actual error from the store if available
+      const errorMessage = useAuthStore.getState().error;
+      toast.error(errorMessage || 'Invalid email or password');
     }
   };
 

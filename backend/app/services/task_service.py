@@ -169,9 +169,20 @@ async def _notify_task_assignment_if_needed(project, task, previous_assigned_to,
     if not user_doc:
         return
 
+    # Fetch Admin details for reply_to
+    admin_email = None
+    admin_name = None
+    if project.get("admin_id"):
+        admin_doc = await users_collection.find_one({"_id": ObjectId(project["admin_id"])})
+        if admin_doc:
+            admin_email = admin_doc.get("email")
+            admin_name = admin_doc.get("name")
+
     trigger_task_assignment_email(
         assignee_email=user_doc.get("email", ""),
         assignee_name=user_doc.get("name"),
         project_name=project.get("name", "Project"),
         task_title=task.get("title", "Task"),
+        admin_email=admin_email,
+        admin_name=admin_name,
     )

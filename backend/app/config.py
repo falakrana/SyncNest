@@ -13,7 +13,6 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     SMTP_USE_TLS: bool = True
     EMAIL_FROM: str = ""
-    RESEND_API_KEY: str = ""
     FRONTEND_BASE_URL: str = "http://localhost:5173"
 
     class Config:

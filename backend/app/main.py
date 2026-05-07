@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 
 from app.config import settings
 from app.database.mongodb import create_indexes
-from app.routes import auth, projects, tasks, dashboard
+from app.routes import auth, projects, tasks, dashboard, tenants
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -32,6 +32,7 @@ app.include_router(auth.router)
 app.include_router(projects.router)
 app.include_router(tasks.router)
 app.include_router(dashboard.router)
+app.include_router(tenants.router)
 
 @app.get("/")
 async def root():

@@ -3,7 +3,6 @@ from typing import Optional
 from pydantic import BaseModel, EmailStr, Field
 
 
-# ── Auth ──────────────────────────────────────────────────────────────────────
 class SignupRequest(BaseModel):
     name: str
     email: EmailStr
@@ -24,4 +23,7 @@ class UserResponse(BaseModel):
     id: str
     name: str
     email: str
+    tenant_id: Optional[str] = None
+    tenant_role: Optional[str] = None
+    tenant_name: Optional[str] = None
     created_at: datetime

@@ -9,6 +9,7 @@ class ProjectModel(BaseModel):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
     name: str
     description: str = ""
+    tenant_id: str
     admin_id: str
     members: List[str] = []
     created_at: datetime = Field(default_factory=datetime.utcnow)

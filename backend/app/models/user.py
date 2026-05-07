@@ -21,6 +21,8 @@ class UserModel(BaseModel):
     name: str
     email: EmailStr
     password: str
+    tenant_id: Optional[str] = None
+    tenant_role: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     class Config:

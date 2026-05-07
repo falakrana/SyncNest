@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, FolderKanban, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, FolderKanban, LogOut, Menu, ShieldCheck, X } from 'lucide-react';
 import useAuthStore from '../../context/useAuthStore';
 
 const Layout = ({ children }) => {
@@ -12,6 +12,7 @@ const Layout = ({ children }) => {
     logout();
     navigate('/login');
   };
+  const isAdminAccount = ['admin', 'owner'].includes((user?.tenant_role || '').toLowerCase());
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
@@ -65,7 +66,15 @@ const Layout = ({ children }) => {
             <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center font-bold">
               {user?.name?.charAt(0).toUpperCase()}
             </div>
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 min-w-0">
+              {isAdminAccount && (
+                <div className="mb-1">
+                  <span className="inline-flex items-center gap-1 rounded-md bg-sky-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-300 border border-sky-400/35">
+                    <ShieldCheck size={10} />
+                    Admin
+                  </span>
+                </div>
+              )}
               <p className="font-medium truncate">{user?.name}</p>
               <p className="text-xs text-slate-400 truncate">{user?.email}</p>
             </div>

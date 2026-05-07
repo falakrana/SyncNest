@@ -21,6 +21,7 @@ class ProjectResponse(BaseModel):
     id: str
     name: str
     description: str
+    tenant_id: str
     admin_id: str
     members: List[MemberResponse]
     created_at: datetime

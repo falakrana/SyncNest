@@ -1,6 +1,6 @@
 from bson import ObjectId
 from fastapi import HTTPException, status
-from app.database.mongodb import users_collection
+from app.database.mongodb import users_collection, tenants_collection
 from app.models.user import UserModel
 from app.schemas.user_schema import SignupRequest, UserResponse
 from app.services.auth_service import get_password_hash
@@ -26,6 +26,8 @@ async def create_user(user_data: SignupRequest) -> UserResponse:
         id=str(created_user["_id"]),
         name=created_user["name"],
         email=created_user["email"],
+        tenant_id=created_user.get("tenant_id"),
+        tenant_role=created_user.get("tenant_role"),
         created_at=created_user["created_at"]
     )
 
@@ -38,3 +40,10 @@ async def get_user_by_id(user_id: str):
         return None
     user = await users_collection.find_one({"_id": ObjectId(user_id)})
     return user
+
+
+async def get_tenant_name(tenant_id: str):
+    if not tenant_id or not ObjectId.is_valid(tenant_id):
+        return None
+    tenant = await tenants_collection.find_one({"_id": ObjectId(tenant_id)})
+    return tenant.get("name") if tenant else None

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from app.schemas.user_schema import SignupRequest, UserResponse, TokenResponse
-from app.services.user_service import create_user, get_user_by_email, get_user_by_id
+from app.services.user_service import create_user, get_user_by_email, get_user_by_id, get_tenant_name
 from app.services.auth_service import verify_password, create_access_token
 from app.middleware.auth_middleware import get_current_user
 
@@ -30,9 +30,13 @@ async def get_me(current_user_id: str = Depends(get_current_user)):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
         
+    tenant_name = await get_tenant_name(user.get("tenant_id"))
     return UserResponse(
         id=str(user["_id"]),
         name=user["name"],
         email=user["email"],
+        tenant_id=user.get("tenant_id"),
+        tenant_role=user.get("tenant_role"),
+        tenant_name=tenant_name,
         created_at=user["created_at"]
     )

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Plus, UserPlus, Clock, Trash2, Pencil } from 'lucide-react';
+import { Plus, UserPlus, UserMinus, Clock, Trash2, Pencil } from 'lucide-react';
 import { projectService } from '../../services/projectService';
 import { taskService } from '../../services/taskService';
+import { tenantService } from '../../services/tenantService';
 import useAuthStore from '../../context/useAuthStore';
 import toast from 'react-hot-toast';
 
@@ -23,10 +24,13 @@ const ProjectDetails = () => {
   const [newTask, setNewTask] = useState({ title: '', description: '', priority: 'Medium', due_date: today, assigned_to: '' });
   const [editingTask, setEditingTask] = useState({ id: null, title: '', description: '', priority: 'Medium', due_date: '', assigned_to: '' });
   const [memberEmail, setMemberEmail] = useState('');
+  const [inviteToken, setInviteToken] = useState('');
+  const [removingMemberId, setRemovingMemberId] = useState(null);
+  const [memberToRemove, setMemberToRemove] = useState(null);
   const statusOptions = ['To Do', 'In Progress', 'In Testing', 'Done'];
   const members = project?.members || [];
   const memberCount = members.length;
-  const displayedMembers = members.slice(0, 4);
+  const displayedMembers = members;
   const remainingMembersCount = Math.max(memberCount - displayedMembers.length, 0);
   const normalizedMemberEmail = memberEmail.trim().toLowerCase();
   const existingMember = members.find(
@@ -163,7 +167,32 @@ const ProjectDetails = () => {
       setShowMemberModal(false);
       fetchData();
     } catch (error) {
-      toast.error('User not found or already in project');
+      toast.error(error.response?.data?.detail || 'Unable to add member');
+    }
+  };
+
+  const handleCreateInvite = async () => {
+    try {
+      const data = await tenantService.createInvite(memberEmail.trim());
+      setInviteToken(data.token);
+      toast.success('Invite token created. Share this token with teammate.');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to create invite');
+    }
+  };
+
+  const handleRemoveMember = async () => {
+    if (!isAdmin || !memberToRemove?.id || memberToRemove.id === user?.id) return;
+    setRemovingMemberId(memberToRemove.id);
+    try {
+      await projectService.removeMember(id, memberToRemove.id);
+      toast.success('Member removed');
+      setMemberToRemove(null);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to remove member');
+    } finally {
+      setRemovingMemberId(null);
     }
   };
 
@@ -190,6 +219,18 @@ const ProjectDetails = () => {
                 <span className="text-xs text-slate-700 font-medium max-w-28 truncate">
                   {member.name || member.email}
                 </span>
+                {isAdmin && member.id !== user?.id && (
+                  <button
+                    type="button"
+                    onClick={() => setMemberToRemove(member)}
+                    disabled={removingMemberId === member.id}
+                    className="text-slate-400 hover:text-red-600 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    aria-label={`Remove ${member.name || member.email}`}
+                    title="Remove member"
+                  >
+                    <UserMinus size={14} />
+                  </button>
+                )}
               </div>
             ))}
             {remainingMembersCount > 0 && (
@@ -409,6 +450,41 @@ const ProjectDetails = () => {
         </div>
       )}
 
+      {/* Remove Member Modal */}
+      {memberToRemove && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50">
+          <div className="bg-white rounded-2xl p-5 sm:p-8 w-full max-w-md shadow-2xl max-h-[92vh] overflow-y-auto">
+            <h2 className="text-xl sm:text-2xl font-bold mb-2">Remove Member</h2>
+            <p className="text-slate-600 mb-6">
+              Are you sure you want to remove
+              {' '}
+              <span className="font-semibold text-slate-900">
+                {memberToRemove.name || memberToRemove.email}
+              </span>
+              {' '}
+              from this project?
+            </p>
+            <div className="flex flex-col-reverse sm:flex-row gap-3">
+              <button
+                type="button"
+                onClick={() => setMemberToRemove(null)}
+                className="flex-1 py-2.5 border border-slate-300 rounded-lg font-bold"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleRemoveMember}
+                disabled={removingMemberId === memberToRemove.id}
+                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {removingMemberId === memberToRemove.id ? 'Removing...' : 'Remove'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Edit Task Modal */}
       {showEditTaskModal && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50">
@@ -501,9 +577,21 @@ const ProjectDetails = () => {
                     Already enrolled: {existingMember.name || existingMember.email}
                   </p>
                 )}
+                {inviteToken && (
+                  <p className="mt-2 text-xs text-emerald-700 break-all">
+                    Invite token: {inviteToken}
+                  </p>
+                )}
               </div>
               <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2 sm:pt-4">
                 <button type="button" onClick={() => setShowMemberModal(false)} className="flex-1 py-2.5 border border-slate-300 rounded-lg font-bold">Cancel</button>
+                <button
+                  type="button"
+                  onClick={handleCreateInvite}
+                  className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg font-bold"
+                >
+                  Create Invite Token
+                </button>
                 <button
                   type="submit"
                   disabled={isDuplicateMemberEmail}

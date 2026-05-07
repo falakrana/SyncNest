@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom';
 import { Plus, Users, Calendar } from 'lucide-react';
 import { projectService } from '../../services/projectService';
 import toast from 'react-hot-toast';
+import useAuthStore from '../../context/useAuthStore';
 
 const ProjectList = () => {
+  const { user } = useAuthStore();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -63,6 +65,11 @@ const ProjectList = () => {
             to={`/projects/${project.id}`}
             className="group bg-white p-6 rounded-2xl border border-slate-200 hover:border-blue-400 hover:shadow-xl hover:shadow-blue-500/5 transition-all"
           >
+            {project.admin_id !== user?.id && (
+              <span className="inline-flex items-center mb-3 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">
+                Invited
+              </span>
+            )}
             <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">
               {project.name}
             </h3>

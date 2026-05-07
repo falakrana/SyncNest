@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import useAuthStore from '../../context/useAuthStore';
 import toast from 'react-hot-toast';
 
@@ -8,13 +8,15 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const { login, loading } = useAuthStore();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const success = await login(email, password);
     if (success) {
       toast.success('Welcome back!');
-      navigate('/dashboard');
+      const inviteToken = searchParams.get('inviteToken');
+      navigate(inviteToken ? `/accept-invite?token=${encodeURIComponent(inviteToken)}` : '/dashboard');
     } else {
       // Use the actual error from the store if available
       const errorMessage = useAuthStore.getState().error;

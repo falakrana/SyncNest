@@ -5,7 +5,12 @@ from app.models.project import ProjectModel
 from app.schemas.project_schema import ProjectCreate, ProjectUpdate, ProjectResponse
 
 async def create_project(project_data: ProjectCreate, user_id: str) -> ProjectResponse:
+    creator = await users_collection.find_one({"_id": ObjectId(user_id)})
+    if not creator or not creator.get("tenant_id"):
+        raise HTTPException(status_code=400, detail="Create or join a tenant first")
+
     project_dict = project_data.dict()
+    project_dict["tenant_id"] = creator["tenant_id"]
     project_dict["admin_id"] = user_id
     project_dict["members"] = [user_id] # Admin is also a member
 
@@ -17,7 +22,10 @@ async def create_project(project_data: ProjectCreate, user_id: str) -> ProjectRe
     return await _format_project_response(created_project)
 
 async def get_user_projects(user_id: str):
-    projects_cursor = projects_collection.find({"members": user_id})
+    user_doc = await users_collection.find_one({"_id": ObjectId(user_id)})
+    if not user_doc or not user_doc.get("tenant_id"):
+        return []
+    projects_cursor = projects_collection.find({"tenant_id": user_doc["tenant_id"], "members": user_id})
     projects = await projects_cursor.to_list(length=100)
     return [await _format_project_response(p) for p in projects]
 
@@ -28,6 +36,10 @@ async def get_project_by_id(project_id: str, user_id: str):
     project = await projects_collection.find_one({"_id": ObjectId(project_id)})
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+
+    user_doc = await users_collection.find_one({"_id": ObjectId(user_id)})
+    if not user_doc or user_doc.get("tenant_id") != project.get("tenant_id"):
+        raise HTTPException(status_code=403, detail="Not authorized for this tenant")
         
     if user_id not in project.get("members", []):
         raise HTTPException(status_code=403, detail="Not a member of this project")
@@ -60,15 +72,19 @@ async def delete_project(project_id: str, user_id: str):
     return {"message": "Project deleted successfully"}
 
 async def add_member(project_id: str, email: str, admin_id: str):
-    await _check_project_admin(project_id, admin_id)
+    project = await _check_project_admin(project_id, admin_id)
     
     user_to_add = await users_collection.find_one({"email": email})
     if not user_to_add:
         raise HTTPException(status_code=404, detail="User with this email not found")
+
+    if user_to_add.get("tenant_id") != project.get("tenant_id"):
+        raise HTTPException(
+            status_code=400,
+            detail="User must join this tenant before project assignment",
+        )
         
     user_id_to_add = str(user_to_add["_id"])
-    
-    project = await projects_collection.find_one({"_id": ObjectId(project_id)})
     if user_id_to_add in project.get("members", []):
         raise HTTPException(status_code=400, detail="User already in project")
         
@@ -123,6 +139,7 @@ async def _format_project_response(project):
         id=str(project["_id"]),
         name=project["name"],
         description=project.get("description", ""),
+        tenant_id=project["tenant_id"],
         admin_id=project["admin_id"],
         members=members_data,
         created_at=project["created_at"]

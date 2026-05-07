@@ -33,6 +33,10 @@ class AcceptInviteRequest(BaseModel):
     token: str
 
 
+class TransferOwnershipRequest(BaseModel):
+    email: str
+
+
 class MembershipResponse(BaseModel):
     user_id: str
     tenant_id: Optional[str] = None

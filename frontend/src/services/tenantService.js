@@ -20,4 +20,14 @@ export const tenantService = {
     const response = await api.post('/api/tenants/invites/accept', { token });
     return response.data;
   },
+
+  async leaveWorkspace() {
+    const response = await api.post('/api/tenants/leave');
+    return response.data;
+  },
+
+  async transferOwnership(email) {
+    const response = await api.post('/api/tenants/transfer-ownership', { email });
+    return response.data;
+  },
 };

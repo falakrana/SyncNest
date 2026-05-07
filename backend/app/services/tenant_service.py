@@ -3,7 +3,13 @@ import secrets
 from bson import ObjectId
 from fastapi import HTTPException
 
-from app.database.mongodb import tenants_collection, tenant_invites_collection, users_collection
+from app.database.mongodb import (
+    projects_collection,
+    tasks_collection,
+    tenants_collection,
+    tenant_invites_collection,
+    users_collection,
+)
 from app.schemas.tenant_schema import TenantCreateRequest, TenantInviteCreateRequest
 
 
@@ -138,4 +144,109 @@ async def get_tenant_membership(user_id: str):
         "tenant_id": tenant_id,
         "tenant_name": tenant_name,
         "role": user_doc.get("tenant_role"),
+    }
+
+
+async def leave_tenant(user_id: str):
+    user_doc = await users_collection.find_one({"_id": ObjectId(user_id)})
+    if not user_doc:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    tenant_id = user_doc.get("tenant_id")
+    if not tenant_id:
+        raise HTTPException(status_code=400, detail="You are not in any workspace")
+
+    role = (user_doc.get("tenant_role") or "").lower()
+    if role == "owner":
+        raise HTTPException(
+            status_code=400,
+            detail="Workspace owner cannot leave directly. Transfer ownership or delete the workspace first.",
+        )
+
+    admin_project_count = await projects_collection.count_documents(
+        {"tenant_id": tenant_id, "admin_id": user_id}
+    )
+    if admin_project_count > 0:
+        tenant_doc = await tenants_collection.find_one({"_id": ObjectId(tenant_id)})
+        owner_id = tenant_doc.get("owner_id") if tenant_doc else None
+        if not owner_id or owner_id == user_id:
+            raise HTTPException(
+                status_code=400,
+                detail=f"You are project admin in {admin_project_count} project(s). Transfer admin role or delete those projects before leaving.",
+            )
+        await projects_collection.update_many(
+            {"tenant_id": tenant_id, "admin_id": user_id},
+            {"$set": {"admin_id": owner_id}},
+        )
+
+    await projects_collection.update_many(
+        {"tenant_id": tenant_id},
+        {"$pull": {"members": user_id}},
+    )
+
+    tenant_projects = await projects_collection.find({"tenant_id": tenant_id}, {"_id": 1}).to_list(length=None)
+    tenant_project_ids = [str(project["_id"]) for project in tenant_projects]
+    if tenant_project_ids:
+        await tasks_collection.update_many(
+            {"project_id": {"$in": tenant_project_ids}, "assigned_to": user_id},
+            {"$set": {"assigned_to": None}},
+        )
+
+    await users_collection.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$set": {"tenant_id": None, "tenant_role": None}},
+    )
+
+    return {"message": "You left the workspace successfully"}
+
+
+async def transfer_tenant_ownership(user_id: str, target_email: str):
+    user_doc = await users_collection.find_one({"_id": ObjectId(user_id)})
+    if not user_doc:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    tenant_id = user_doc.get("tenant_id")
+    if not tenant_id:
+        raise HTTPException(status_code=400, detail="Create or join a workspace first")
+
+    if (user_doc.get("tenant_role") or "").lower() != "owner":
+        raise HTTPException(status_code=403, detail="Only workspace owner can transfer ownership")
+
+    normalized_email = (target_email or "").strip().lower()
+    if not normalized_email:
+        raise HTTPException(status_code=400, detail="Target email is required")
+
+    if normalized_email == (user_doc.get("email") or "").strip().lower():
+        raise HTTPException(status_code=400, detail="You are already the workspace owner")
+
+    target_user = await users_collection.find_one({"email": normalized_email})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User with this email not found")
+
+    if target_user.get("tenant_id") != tenant_id:
+        raise HTTPException(status_code=400, detail="User must be in this workspace to become owner")
+
+    await tenants_collection.update_one(
+        {"_id": ObjectId(tenant_id)},
+        {"$set": {"owner_id": str(target_user["_id"])}},
+    )
+
+    # Reassign project ownership within this tenant so previous owner can leave cleanly.
+    await projects_collection.update_many(
+        {"tenant_id": tenant_id, "admin_id": user_id},
+        {"$set": {"admin_id": str(target_user["_id"])}},
+    )
+
+    await users_collection.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$set": {"tenant_role": "admin"}},
+    )
+    await users_collection.update_one(
+        {"_id": target_user["_id"]},
+        {"$set": {"tenant_role": "owner"}},
+    )
+
+    return {
+        "message": "Workspace ownership transferred successfully",
+        "new_owner_email": target_user.get("email"),
     }

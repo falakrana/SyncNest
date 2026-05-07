@@ -81,7 +81,7 @@ async def add_member(project_id: str, email: str, admin_id: str):
     if user_to_add.get("tenant_id") != project.get("tenant_id"):
         raise HTTPException(
             status_code=400,
-            detail="User must join this tenant before project assignment",
+            detail="User is in another workspace. Ask them to leave that workspace or use a different account.",
         )
         
     user_id_to_add = str(user_to_add["_id"])

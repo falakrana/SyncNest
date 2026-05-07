@@ -2,17 +2,49 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, FolderKanban, LogOut, Menu, ShieldCheck, X } from 'lucide-react';
 import useAuthStore from '../../context/useAuthStore';
+import { tenantService } from '../../services/tenantService';
+import toast from 'react-hot-toast';
 
 const Layout = ({ children }) => {
-  const { user, logout } = useAuthStore();
+  const { user, logout, fetchMe } = useAuthStore();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [leavingWorkspace, setLeavingWorkspace] = useState(false);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
+
+  const handleLeaveWorkspace = async () => {
+    if (leavingWorkspace) return;
+    setLeavingWorkspace(true);
+    try {
+      await tenantService.leaveWorkspace();
+      await fetchMe();
+      toast.success('You left the workspace');
+      navigate('/tenant-setup');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to leave workspace');
+    } finally {
+      setLeavingWorkspace(false);
+    }
+  };
   const isAdminAccount = ['admin', 'owner'].includes((user?.tenant_role || '').toLowerCase());
+  const isOwner = (user?.tenant_role || '').toLowerCase() === 'owner';
+
+  const handleTransferOwnership = async () => {
+    const email = window.prompt('Enter teammate email to transfer workspace ownership:');
+    if (!email || !email.trim()) return;
+
+    try {
+      const response = await tenantService.transferOwnership(email.trim());
+      await fetchMe();
+      toast.success(response?.message || 'Ownership transferred successfully');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to transfer ownership');
+    }
+  };
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
@@ -79,7 +111,24 @@ const Layout = ({ children }) => {
               <p className="text-xs text-slate-400 truncate">{user?.email}</p>
             </div>
           </div>
-          <button 
+          {isOwner && (
+            <button
+              onClick={handleTransferOwnership}
+              className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-sky-900/30 text-sky-300 transition-colors mt-2"
+            >
+              <ShieldCheck size={20} />
+              <span>Transfer Ownership</span>
+            </button>
+          )}
+          <button
+            onClick={handleLeaveWorkspace}
+            disabled={leavingWorkspace}
+            className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-amber-900/30 text-amber-300 transition-colors mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <X size={20} />
+            <span>{leavingWorkspace ? 'Leaving...' : 'Leave Workspace'}</span>
+          </button>
+          <button
             onClick={handleLogout}
             className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-red-900/30 text-red-400 transition-colors mt-2"
           >

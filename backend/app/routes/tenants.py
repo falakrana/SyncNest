@@ -9,12 +9,15 @@ from app.schemas.tenant_schema import (
     TenantInviteCreateRequest,
     TenantInviteResponse,
     TenantResponse,
+    TransferOwnershipRequest,
 )
 from app.services.tenant_service import (
     accept_tenant_invite,
     create_tenant,
     create_tenant_invite,
     get_tenant_membership,
+    leave_tenant,
+    transfer_tenant_ownership,
 )
 
 router = APIRouter(prefix="/api/tenants", tags=["tenants"])
@@ -41,3 +44,16 @@ async def api_create_tenant_invite(
 @router.post("/invites/accept", response_model=MembershipResponse)
 async def api_accept_tenant_invite(data: AcceptInviteRequest, current_user_id: str = Depends(get_current_user)):
     return await accept_tenant_invite(data.token, current_user_id)
+
+
+@router.post("/leave")
+async def api_leave_tenant(current_user_id: str = Depends(get_current_user)):
+    return await leave_tenant(current_user_id)
+
+
+@router.post("/transfer-ownership")
+async def api_transfer_ownership(
+    data: TransferOwnershipRequest,
+    current_user_id: str = Depends(get_current_user),
+):
+    return await transfer_tenant_ownership(current_user_id, data.email)

@@ -8,6 +8,8 @@ async def create_project(project_data: ProjectCreate, user_id: str) -> ProjectRe
     creator = await users_collection.find_one({"_id": ObjectId(user_id)})
     if not creator or not creator.get("tenant_id"):
         raise HTTPException(status_code=400, detail="Create or join a tenant first")
+    if (creator.get("tenant_role") or "").lower() not in ["owner", "admin"]:
+        raise HTTPException(status_code=403, detail="Only workspace owner/admin can create projects")
 
     project_dict = project_data.dict()
     project_dict["tenant_id"] = creator["tenant_id"]

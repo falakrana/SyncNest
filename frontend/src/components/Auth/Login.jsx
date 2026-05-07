@@ -3,6 +3,9 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import useAuthStore from '../../context/useAuthStore';
 import toast from 'react-hot-toast';
 
+const PENDING_INVITE_TOKEN_KEY = 'pendingInviteToken';
+const PENDING_INVITE_EMAIL_KEY = 'pendingInviteEmail';
+
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -15,8 +18,22 @@ const Login = () => {
     const success = await login(email, password);
     if (success) {
       toast.success('Welcome back!');
-      const inviteToken = searchParams.get('inviteToken');
-      navigate(inviteToken ? `/accept-invite?token=${encodeURIComponent(inviteToken)}` : '/dashboard');
+      const inviteToken = searchParams.get('inviteToken') || localStorage.getItem(PENDING_INVITE_TOKEN_KEY);
+      const inviteEmail = (
+        searchParams.get('inviteEmail') || localStorage.getItem(PENDING_INVITE_EMAIL_KEY) || ''
+      ).trim().toLowerCase();
+      if (inviteEmail && email.trim().toLowerCase() !== inviteEmail) {
+        toast.error(`Use invited email: ${inviteEmail}`);
+        return;
+      }
+      if (inviteToken) {
+        localStorage.setItem(PENDING_INVITE_TOKEN_KEY, inviteToken);
+      }
+      if (inviteEmail) {
+        localStorage.setItem(PENDING_INVITE_EMAIL_KEY, inviteEmail);
+      }
+      const inviteEmailQuery = inviteEmail ? `&email=${encodeURIComponent(inviteEmail)}` : '';
+      navigate(inviteToken ? `/accept-invite?token=${encodeURIComponent(inviteToken)}${inviteEmailQuery}` : '/dashboard');
     } else {
       // Use the actual error from the store if available
       const errorMessage = useAuthStore.getState().error;
@@ -64,7 +81,10 @@ const Login = () => {
         
         <p className="mt-8 text-center text-slate-600">
           Don't have an account?{' '}
-          <Link to="/signup" className="text-blue-600 font-bold hover:underline">
+          <Link
+            to={`/signup${searchParams.get('inviteToken') ? `?inviteToken=${encodeURIComponent(searchParams.get('inviteToken'))}${searchParams.get('inviteEmail') ? `&inviteEmail=${encodeURIComponent(searchParams.get('inviteEmail'))}` : ''}` : ''}`}
+            className="text-blue-600 font-bold hover:underline"
+          >
             Create account
           </Link>
         </p>

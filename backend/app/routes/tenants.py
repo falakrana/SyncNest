@@ -15,6 +15,7 @@ from app.services.tenant_service import (
     accept_tenant_invite,
     create_tenant,
     create_tenant_invite,
+    delete_tenant_workspace,
     get_tenant_membership,
     leave_tenant,
     transfer_tenant_ownership,
@@ -57,3 +58,8 @@ async def api_transfer_ownership(
     current_user_id: str = Depends(get_current_user),
 ):
     return await transfer_tenant_ownership(current_user_id, data.email)
+
+
+@router.delete("")
+async def api_delete_workspace(current_user_id: str = Depends(get_current_user)):
+    return await delete_tenant_workspace(current_user_id)

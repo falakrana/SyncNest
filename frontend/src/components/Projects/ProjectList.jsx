@@ -7,6 +7,7 @@ import useAuthStore from '../../context/useAuthStore';
 
 const ProjectList = () => {
   const { user } = useAuthStore();
+  const canCreateProject = ['admin', 'owner'].includes((user?.tenant_role || '').toLowerCase());
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -29,6 +30,10 @@ const ProjectList = () => {
 
   const handleCreateProject = async (e) => {
     e.preventDefault();
+    if (!canCreateProject) {
+      toast.error('Only workspace admin/owner can create projects');
+      return;
+    }
     try {
       await projectService.createProject(newProject.name, newProject.description);
       toast.success('Project created!');
@@ -49,13 +54,15 @@ const ProjectList = () => {
           <h1 className="text-3xl font-bold text-slate-900">Your Projects</h1>
           <p className="text-slate-500">Manage and track your team projects</p>
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="w-full sm:w-auto justify-center flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition-all shadow-lg shadow-blue-500/20"
-        >
-          <Plus size={20} />
-          <span>New Project</span>
-        </button>
+        {canCreateProject && (
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="w-full sm:w-auto justify-center flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition-all shadow-lg shadow-blue-500/20"
+          >
+            <Plus size={20} />
+            <span>New Project</span>
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -89,7 +96,7 @@ const ProjectList = () => {
         ))}
       </div>
 
-      {showCreateModal && (
+      {showCreateModal && canCreateProject && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl">
             <h2 className="text-2xl font-bold mb-6">Create New Project</h2>

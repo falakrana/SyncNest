@@ -30,4 +30,9 @@ export const tenantService = {
     const response = await api.post('/api/tenants/transfer-ownership', { email });
     return response.data;
   },
+
+  async deleteWorkspace() {
+    const response = await api.delete('/api/tenants');
+    return response.data;
+  },
 };

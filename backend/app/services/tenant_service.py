@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import secrets
+from urllib.parse import quote
 from bson import ObjectId
 from fastapi import HTTPException
 
@@ -46,7 +47,7 @@ async def create_tenant(data: TenantCreateRequest, user_id: str):
     }
 
 
-async def create_tenant_invite(data: TenantInviteCreateRequest, user_id: str, _frontend_base_url: str):
+async def create_tenant_invite(data: TenantInviteCreateRequest, user_id: str, frontend_base_url: str):
     user_doc = await users_collection.find_one({"_id": ObjectId(user_id)})
     if not user_doc:
         raise HTTPException(status_code=404, detail="User not found")
@@ -71,6 +72,8 @@ async def create_tenant_invite(data: TenantInviteCreateRequest, user_id: str, _f
     }
 
     result = await tenant_invites_collection.insert_one(invite_doc)
+    encoded_email = quote(invite_doc["email"])
+    invite_url = f"{frontend_base_url.rstrip('/')}/accept-invite?token={token}&email={encoded_email}"
     return {
         "id": str(result.inserted_id),
         "tenant_id": tenant_id,
@@ -79,6 +82,7 @@ async def create_tenant_invite(data: TenantInviteCreateRequest, user_id: str, _f
         "status": invite_doc["status"],
         "expires_at": invite_doc["expires_at"],
         "token": token,
+        "invite_url": invite_url,
     }
 
 
@@ -250,3 +254,34 @@ async def transfer_tenant_ownership(user_id: str, target_email: str):
         "message": "Workspace ownership transferred successfully",
         "new_owner_email": target_user.get("email"),
     }
+
+
+async def delete_tenant_workspace(user_id: str):
+    user_doc = await users_collection.find_one({"_id": ObjectId(user_id)})
+    if not user_doc:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    tenant_id = user_doc.get("tenant_id")
+    if not tenant_id:
+        raise HTTPException(status_code=400, detail="You are not in any workspace")
+
+    role = (user_doc.get("tenant_role") or "").lower()
+    if role not in ["owner", "admin"]:
+        raise HTTPException(status_code=403, detail="Only workspace owner/admin can delete workspace")
+
+    tenant_obj_id = ObjectId(tenant_id)
+
+    tenant_projects = await projects_collection.find({"tenant_id": tenant_id}, {"_id": 1}).to_list(length=None)
+    project_ids = [str(project["_id"]) for project in tenant_projects]
+    if project_ids:
+        await tasks_collection.delete_many({"project_id": {"$in": project_ids}})
+
+    await projects_collection.delete_many({"tenant_id": tenant_id})
+    await tenant_invites_collection.delete_many({"tenant_id": tenant_id})
+    await users_collection.update_many(
+        {"tenant_id": tenant_id},
+        {"$set": {"tenant_id": None, "tenant_role": None}},
+    )
+    await tenants_collection.delete_one({"_id": tenant_obj_id})
+
+    return {"message": "Workspace deleted successfully"}

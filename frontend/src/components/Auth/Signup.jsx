@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import useAuthStore from '../../context/useAuthStore';
 import toast from 'react-hot-toast';
 
@@ -9,13 +9,17 @@ const Signup = () => {
   const [password, setPassword] = useState('');
   const { signup, loading } = useAuthStore();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const success = await signup(name, email, password);
     if (success) {
       toast.success('Account created! Please login.');
-      navigate('/login');
+      const inviteToken = searchParams.get('inviteToken');
+      const inviteEmail = searchParams.get('inviteEmail');
+      const inviteEmailQuery = inviteEmail ? `&inviteEmail=${encodeURIComponent(inviteEmail)}` : '';
+      navigate(inviteToken ? `/login?inviteToken=${encodeURIComponent(inviteToken)}${inviteEmailQuery}` : '/login');
     } else {
       // Use the actual error from the store if available
       const errorMessage = useAuthStore.getState().error;
@@ -75,7 +79,10 @@ const Signup = () => {
         
         <p className="mt-8 text-center text-slate-600">
           Already have an account?{' '}
-          <Link to="/login" className="text-blue-600 font-bold hover:underline">
+          <Link
+            to={`/login${searchParams.get('inviteToken') ? `?inviteToken=${encodeURIComponent(searchParams.get('inviteToken'))}${searchParams.get('inviteEmail') ? `&inviteEmail=${encodeURIComponent(searchParams.get('inviteEmail'))}` : ''}` : ''}`}
+            className="text-blue-600 font-bold hover:underline"
+          >
             Sign in
           </Link>
         </p>

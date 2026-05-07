@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 from pydantic import BaseModel
 
 
@@ -16,7 +16,7 @@ class TenantResponse(BaseModel):
 
 class TenantInviteCreateRequest(BaseModel):
     email: str
-    role: str = "member"
+    role: Literal["member", "admin"] = "member"
 
 
 class TenantInviteResponse(BaseModel):
@@ -27,6 +27,7 @@ class TenantInviteResponse(BaseModel):
     status: str
     expires_at: datetime
     token: str
+    invite_url: str
 
 
 class AcceptInviteRequest(BaseModel):

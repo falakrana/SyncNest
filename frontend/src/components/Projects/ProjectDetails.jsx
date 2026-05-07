@@ -17,6 +17,7 @@ const ProjectDetails = () => {
   const [loading, setLoading] = useState(true);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [showEditTaskModal, setShowEditTaskModal] = useState(false);
+  const [showEditProjectModal, setShowEditProjectModal] = useState(false);
   const [showMemberModal, setShowMemberModal] = useState(false);
   const [showDeleteTaskModal, setShowDeleteTaskModal] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState(null);
@@ -24,7 +25,10 @@ const ProjectDetails = () => {
   const [newTask, setNewTask] = useState({ title: '', description: '', priority: 'Medium', due_date: today, assigned_to: '' });
   const [editingTask, setEditingTask] = useState({ id: null, title: '', description: '', priority: 'Medium', due_date: '', assigned_to: '' });
   const [memberEmail, setMemberEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState('member');
+  const [projectForm, setProjectForm] = useState({ name: '', description: '' });
   const [inviteToken, setInviteToken] = useState('');
+  const [inviteLink, setInviteLink] = useState('');
   const [removingMemberId, setRemovingMemberId] = useState(null);
   const [memberToRemove, setMemberToRemove] = useState(null);
   const statusOptions = ['To Do', 'In Progress', 'In Testing', 'Done'];
@@ -171,13 +175,47 @@ const ProjectDetails = () => {
     }
   };
 
+  const handleOpenEditProject = () => {
+    setProjectForm({
+      name: project?.name || '',
+      description: project?.description || ''
+    });
+    setShowEditProjectModal(true);
+  };
+
+  const handleEditProject = async (e) => {
+    e.preventDefault();
+    try {
+      await projectService.updateProject(id, {
+        name: projectForm.name.trim(),
+        description: projectForm.description.trim()
+      });
+      toast.success('Project details updated');
+      setShowEditProjectModal(false);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to update project');
+    }
+  };
+
   const handleCreateInvite = async () => {
     try {
-      const data = await tenantService.createInvite(memberEmail.trim());
+      const data = await tenantService.createInvite(memberEmail.trim(), inviteRole);
       setInviteToken(data.token);
-      toast.success('Invite token created. Share this token with teammate.');
+      setInviteLink(data.invite_url || '');
+      toast.success('Invite link created. Share this link with teammate.');
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to create invite');
+    }
+  };
+
+  const handleCopyInviteLink = async () => {
+    if (!inviteLink) return;
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      toast.success('Invite link copied');
+    } catch (error) {
+      toast.error('Failed to copy invite link');
     }
   };
 
@@ -241,6 +279,15 @@ const ProjectDetails = () => {
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
+          {isAdmin && (
+            <button
+              onClick={handleOpenEditProject}
+              className="flex items-center gap-2 bg-white hover:bg-slate-100 text-slate-900 px-4 py-2 rounded-xl font-bold transition-all border border-slate-300"
+            >
+              <Pencil size={18} />
+              <span>Edit Project</span>
+            </button>
+          )}
           {isAdmin && (
             <button
               onClick={() => setShowMemberModal(true)}
@@ -450,6 +497,39 @@ const ProjectDetails = () => {
         </div>
       )}
 
+      {/* Edit Project Modal */}
+      {showEditProjectModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50">
+          <div className="bg-white rounded-2xl p-5 sm:p-8 w-full max-w-md shadow-2xl max-h-[92vh] overflow-y-auto">
+            <h2 className="text-xl sm:text-2xl font-bold mb-5 sm:mb-6">Edit Project Details</h2>
+            <form onSubmit={handleEditProject} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold mb-1">Project Name</label>
+                <input
+                  type="text"
+                  required
+                  className="w-full px-4 py-2 rounded-lg border border-slate-300 outline-none focus:ring-2 focus:ring-blue-500"
+                  value={projectForm.name}
+                  onChange={(e) => setProjectForm({ ...projectForm, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1">Description</label>
+                <textarea
+                  className="w-full px-4 py-2 rounded-lg border border-slate-300 outline-none focus:ring-2 focus:ring-blue-500 h-24"
+                  value={projectForm.description}
+                  onChange={(e) => setProjectForm({ ...projectForm, description: e.target.value })}
+                />
+              </div>
+              <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2 sm:pt-4">
+                <button type="button" onClick={() => setShowEditProjectModal(false)} className="flex-1 py-2.5 border border-slate-300 rounded-lg font-bold">Cancel</button>
+                <button type="submit" className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg font-bold">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Remove Member Modal */}
       {memberToRemove && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50">
@@ -582,15 +662,49 @@ const ProjectDetails = () => {
                     Invite token: {inviteToken}
                   </p>
                 )}
+                {inviteLink && (
+                  <div className="mt-2 space-y-2">
+                    <p className="text-xs text-emerald-700 break-all">
+                      Invite link: {inviteLink}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleCopyInviteLink}
+                      className="w-full py-2 border border-emerald-300 text-emerald-800 rounded-lg font-semibold"
+                    >
+                      Copy Invite Link
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1">Workspace Role</label>
+                <select
+                  className="w-full px-4 py-2 rounded-lg border border-slate-300 outline-none focus:ring-2 focus:ring-blue-500"
+                  value={inviteRole}
+                  onChange={(e) => setInviteRole(e.target.value)}
+                >
+                  <option value="member">Member</option>
+                  <option value="admin">Admin</option>
+                </select>
               </div>
               <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2 sm:pt-4">
-                <button type="button" onClick={() => setShowMemberModal(false)} className="flex-1 py-2.5 border border-slate-300 rounded-lg font-bold">Cancel</button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowMemberModal(false);
+                    setInviteRole('member');
+                  }}
+                  className="flex-1 py-2.5 border border-slate-300 rounded-lg font-bold"
+                >
+                  Cancel
+                </button>
                 <button
                   type="button"
                   onClick={handleCreateInvite}
                   className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg font-bold"
                 >
-                  Create Invite Token
+                  Create Invite Link
                 </button>
                 <button
                   type="submit"

@@ -39,8 +39,9 @@ graph TD
 4. Tenant members create and manage projects in `/api/projects`.
 5. Tasks are managed through `/api/projects/{project_id}/tasks` and `/api/tasks/{task_id}` endpoints.
 6. Workspace owner can transfer ownership via `/api/tenants/transfer-ownership`.
-7. Users can leave workspace via `/api/tenants/leave` (owners must transfer ownership first).
-8. Project stats are read from `/api/dashboard/{project_id}/stats`.
+7. Owner/admin can delete workspace via `DELETE /api/tenants`.
+8. Users can leave workspace via `/api/tenants/leave` (owners must transfer ownership first, unless workspace is deleted).
+9. Project stats are read from `/api/dashboard/{project_id}/stats`.
 
 ### Workspace Lifecycle Rules
 - Project assignment is tenant-scoped; users must belong to the same tenant as the project.
@@ -55,6 +56,10 @@ graph TD
   - Leaving user is removed from project member lists in that tenant.
   - If leaving user still owns projects and is not tenant owner, those project admin roles are reassigned to current tenant owner.
   - Task assignments to the leaving user in tenant projects are cleared.
+- On delete workspace:
+  - Allowed for tenant owner/admin.
+  - Workspace projects, tasks, and invites are deleted.
+  - All workspace users are detached from tenant membership (`tenant_id` and `tenant_role` cleared).
 
 ## 3. Database Schema & API Models
 

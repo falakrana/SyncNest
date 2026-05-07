@@ -10,6 +10,11 @@ const Layout = ({ children }) => {
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [leavingWorkspace, setLeavingWorkspace] = useState(false);
+  const [deletingWorkspace, setDeletingWorkspace] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [transferEmail, setTransferEmail] = useState('');
+  const [transferringOwnership, setTransferringOwnership] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -34,15 +39,40 @@ const Layout = ({ children }) => {
   const isOwner = (user?.tenant_role || '').toLowerCase() === 'owner';
 
   const handleTransferOwnership = async () => {
-    const email = window.prompt('Enter teammate email to transfer workspace ownership:');
-    if (!email || !email.trim()) return;
-
+    const email = transferEmail.trim();
+    if (!email) {
+      toast.error('Please enter teammate email');
+      return;
+    }
+    if (transferringOwnership) return;
+    setTransferringOwnership(true);
     try {
-      const response = await tenantService.transferOwnership(email.trim());
+      const response = await tenantService.transferOwnership(email);
       await fetchMe();
       toast.success(response?.message || 'Ownership transferred successfully');
+      setShowTransferModal(false);
+      setTransferEmail('');
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to transfer ownership');
+    } finally {
+      setTransferringOwnership(false);
+    }
+  };
+
+  const handleDeleteWorkspace = async () => {
+    if (deletingWorkspace) return;
+
+    setDeletingWorkspace(true);
+    try {
+      await tenantService.deleteWorkspace();
+      await fetchMe();
+      toast.success('Workspace deleted');
+      setShowDeleteModal(false);
+      navigate('/tenant-setup');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to delete workspace');
+    } finally {
+      setDeletingWorkspace(false);
     }
   };
 
@@ -55,6 +85,87 @@ const Layout = ({ children }) => {
           className="fixed inset-0 z-30 bg-slate-900/45 md:hidden"
           onClick={() => setIsSidebarOpen(false)}
         />
+      )}
+      {showTransferModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <button
+            type="button"
+            aria-label="Close transfer ownership modal"
+            className="absolute inset-0 bg-slate-900/55"
+            onClick={() => {
+              if (transferringOwnership) return;
+              setShowTransferModal(false);
+            }}
+          />
+          <div className="relative z-10 w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
+            <h3 className="text-lg font-bold text-white">Transfer Ownership</h3>
+            <p className="mt-1 text-sm text-slate-300">
+              Enter teammate email to make them workspace owner.
+            </p>
+            <input
+              type="email"
+              value={transferEmail}
+              onChange={(e) => setTransferEmail(e.target.value)}
+              placeholder="teammate@email.com"
+              className="mt-4 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-sky-500"
+            />
+            <div className="mt-4 flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => setShowTransferModal(false)}
+                disabled={transferringOwnership}
+                className="rounded-lg border border-slate-600 px-3 py-2 text-slate-200 hover:bg-slate-800 disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleTransferOwnership}
+                disabled={transferringOwnership}
+                className="rounded-lg bg-sky-600 px-3 py-2 font-semibold text-white hover:bg-sky-700 disabled:opacity-60"
+              >
+                {transferringOwnership ? 'Transferring...' : 'Transfer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <button
+            type="button"
+            aria-label="Close delete workspace modal"
+            className="absolute inset-0 bg-slate-900/55"
+            onClick={() => {
+              if (deletingWorkspace) return;
+              setShowDeleteModal(false);
+            }}
+          />
+          <div className="relative z-10 w-full max-w-md rounded-2xl border border-rose-500/40 bg-slate-900 p-5 shadow-2xl">
+            <h3 className="text-lg font-bold text-white">Delete Workspace</h3>
+            <p className="mt-2 text-sm text-rose-200">
+              This action is permanent. All workspace projects, tasks, invites, and memberships will be removed.
+            </p>
+            <div className="mt-4 flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                disabled={deletingWorkspace}
+                className="rounded-lg border border-slate-600 px-3 py-2 text-slate-200 hover:bg-slate-800 disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteWorkspace}
+                disabled={deletingWorkspace}
+                className="rounded-lg bg-rose-600 px-3 py-2 font-semibold text-white hover:bg-rose-700 disabled:opacity-60"
+              >
+                {deletingWorkspace ? 'Deleting...' : 'Delete Workspace'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Sidebar */}
@@ -113,11 +224,21 @@ const Layout = ({ children }) => {
           </div>
           {isOwner && (
             <button
-              onClick={handleTransferOwnership}
+              onClick={() => setShowTransferModal(true)}
               className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-sky-900/30 text-sky-300 transition-colors mt-2"
             >
               <ShieldCheck size={20} />
               <span>Transfer Ownership</span>
+            </button>
+          )}
+          {isAdminAccount && (
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              disabled={deletingWorkspace}
+              className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-rose-900/30 text-rose-300 transition-colors mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <X size={20} />
+              <span>{deletingWorkspace ? 'Deleting...' : 'Delete Workspace'}</span>
             </button>
           )}
           <button

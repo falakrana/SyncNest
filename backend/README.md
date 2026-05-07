@@ -4,7 +4,7 @@ FastAPI backend for the Team Task Manager application.
 
 ## Features
 - JWT Authentication
-- Tenant management (create tenant, invite, accept invite, membership, leave workspace, transfer ownership)
+- Tenant management (create tenant, invite, accept invite, membership, leave workspace, transfer ownership, delete workspace)
 - Project & Task management
 - MongoDB integration (Motor)
 - Email notifications (SMTP)
@@ -46,7 +46,7 @@ Swagger documentation is available at `http://localhost:8000/docs`.
 ## Route Groups
 
 - `/api/auth` - signup/login/me
-- `/api/tenants` - tenant creation, membership, invites, invite acceptance, leave workspace, transfer ownership
+- `/api/tenants` - tenant creation, membership, invites, invite acceptance, leave workspace, transfer ownership, delete workspace
 - `/api/projects` - project CRUD + member management
 - `/api/projects/{project_id}/tasks` and `/api/tasks/{task_id}` - task CRUD/status
 - `/api/dashboard` - project stats
@@ -65,6 +65,11 @@ Swagger documentation is available at `http://localhost:8000/docs`.
   - Target user must already belong to the same workspace.
   - Updates tenant `owner_id`, promotes target user to `owner`, demotes previous owner to `admin`.
   - Reassigns project admin ownership from previous owner to the new owner for all projects in that workspace.
+
+- `DELETE /api/tenants`
+  - Owner/admin action.
+  - Deletes the workspace and tenant-scoped data (projects, tasks, invites).
+  - Clears `tenant_id` and `tenant_role` for all users in that workspace.
 
 ## Project Structure
 - `app/main.py`: Entry point.
